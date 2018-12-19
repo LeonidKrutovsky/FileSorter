@@ -8,6 +8,11 @@
 #include <numeric>
 #include <thread>
 #include <future>
+#include <chrono>
+
+#if defined(__GNUG__)
+ #include <parallel/algorithm>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -55,9 +60,6 @@ std::vector<std::string_view> find_and_sort_lines(std::string_view buffer)
 
 std::vector<std::string_view> async_sorted_lines(std::string_view buffer, const std::string_view::size_type chunk_size)
 {
-    std::cout << "Thread id = " << std::this_thread::get_id() << std::endl;
-    std::cout << "Chunk size = " << chunk_size << "Buffer size = " << buffer.size() << std::endl;
-
     auto pos = buffer.find('\n', chunk_size);
 
     if (pos == std::string::npos)
@@ -77,6 +79,11 @@ std::vector<std::string_view> async_sorted_lines(std::string_view buffer, const 
 
 std::vector<std::string_view> sorted_lines(std::string_view buffer)
 {
+#if defined(__GNUG__)
+    auto lines = find_lines(buffer);
+    __gnu_parallel::sort(lines.begin(), lines.end());
+    return lines;
+#else
     static constexpr std::string_view::size_type treshold = 1024 * 1024 * 4;
     const int max_threads = std::thread::hardware_concurrency();
     const std::string_view::size_type chunk_size = buffer.size() / max_threads;
@@ -87,10 +94,8 @@ std::vector<std::string_view> sorted_lines(std::string_view buffer)
         return lines;
     }
     return async_sorted_lines(buffer, chunk_size);
+#endif
 }
-
-void test_find_lines();
-void test_read_write_file();
 
 int main(int argc, char* argv[])
 {
@@ -105,43 +110,8 @@ int main(int argc, char* argv[])
         std::cerr << "No input file " << input_file_name << std::endl;
     }
     const fs::path output_file_name = argv[2];
-
     const auto buffer = read_file(input_file_name);
     auto lines = sorted_lines(std::string_view(buffer));
     write_file(output_file_name, lines);
-
-    test_find_lines();
-    test_read_write_file();
     return 0;
-}
-
-void test_find_lines()
-{
-    const std::string_view test("\n12345\n12345\n");
-    std::vector<std::string_view> expected;
-    expected.push_back(test.substr(0, 0));
-    expected.push_back(test.substr(1, 5));
-    expected.push_back(test.substr(7, 5));
-
-    auto result = find_lines(test);
-    assert(result == expected);
-}
-
-void test_read_write_file()
-{
-    std::vector<std::string_view> test;
-    test.emplace_back("1111");
-    test.emplace_back("5555");
-    test.emplace_back("AAAA");
-
-    const fs::path path = "test_output.txt";
-    write_file(path, test);
-    assert(fs::exists(path));
-
-    const auto result = read_file(path);
-    fs::remove(path);
-    auto expected_size = std::accumulate(test.begin(), test.end(), 0u, [](size_t x, const auto & sv2){
-        return x + sv2.size() + 1; // + '\n'
-    });
-    assert(result.size() == expected_size);
 }
