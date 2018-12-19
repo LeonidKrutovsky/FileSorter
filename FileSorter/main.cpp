@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <iterator>
 #include <numeric>
+#include <thread>
+#include <future>
 
 namespace fs = std::filesystem;
 
@@ -19,14 +21,15 @@ std::string read_file(const fs::path & path)
     return buffer;
 }
 
-template <typename T>
-void write_file(const fs::path & path, T lines)
+
+void write_file(const fs::path & path, std::vector<std::string_view> & lines)
 {
     std::ofstream file(path.u8string());
-    std::copy( std::begin(lines), std::end(lines),
+    std::copy( lines.cbegin(), lines.cend(),
                std::ostream_iterator<std::string_view>(file, "\n") );
     file.close();
 }
+
 
 std::vector<std::string_view> find_lines(std::string_view str)
 {
@@ -42,13 +45,48 @@ std::vector<std::string_view> find_lines(std::string_view str)
     return lines;
 }
 
-void sort_lines(std::vector<std::string_view> & lines)
+
+std::vector<std::string_view> async_sorted_lines(std::string_view buffer, const std::string_view::size_type chunk_size)
 {
-    std::sort(lines.begin(), lines.end());  //TODO: parallel sort
+    std::cout << "Thread id = " << std::this_thread::get_id() << std::endl;
+    std::cout << "Chunk size = " << chunk_size << "Buffer size = " << buffer.size() << std::endl;
+
+    auto pos = buffer.find('\n', chunk_size);
+
+    if (pos == std::string::npos)
+    {
+        auto lines = find_lines(buffer);
+        std::sort(lines.begin(), lines.end());
+        return lines;
+    }
+
+    auto handle = std::async(std::launch::async,
+                             async_sorted_lines, buffer.substr(pos+1), chunk_size);
+
+    auto first_chunk = find_lines(buffer.substr(0, pos));
+    std::sort(first_chunk.begin(), first_chunk.begin() + pos);
+
+    auto last_chunk = handle.get();
+    std::vector<std::string_view> result(first_chunk.size() + last_chunk.size());
+    std::merge(first_chunk.begin(), first_chunk.end(), last_chunk.begin(), last_chunk.end(), result.begin());
+    return result;
+}
+
+std::vector<std::string_view> sorted_lines(std::string_view buffer)
+{
+    static constexpr std::string_view::size_type treshold = 1024 * 1024 * 4;
+    const int max_threads = std::thread::hardware_concurrency();
+    const std::string_view::size_type chunk_size = buffer.size() / max_threads;
+    if (chunk_size < treshold)
+    {
+        auto lines = find_lines(buffer);
+        std::sort(lines.begin(), lines.end());
+        return lines;
+    }
+    return async_sorted_lines(buffer, chunk_size);
 }
 
 void test_find_lines();
-void test_sort_lines();
 void test_read_write_file();
 
 int main(int argc, char* argv[])
@@ -66,11 +104,12 @@ int main(int argc, char* argv[])
     const fs::path output_file_name = argv[2];
 
     const auto buffer = read_file(input_file_name);
-    std::cout << buffer << std::endl;
+    auto lines = sorted_lines(std::string_view(buffer));
+    write_file(output_file_name, lines);
 
-    test_find_lines();
-    test_sort_lines();
-    test_read_write_file();
+    //test_find_lines();
+    //test_sort_lines();
+    //test_read_write_file();
     return 0;
 }
 
@@ -84,19 +123,6 @@ void test_find_lines()
 
     auto result = find_lines(test);
     assert(result == expected);
-}
-
-void test_sort_lines()
-{
-    std::vector<std::string_view> test;
-    test.emplace_back("1111");
-    test.emplace_back("5555");
-    test.emplace_back("AAAA");
-
-    auto expected = test;
-    std::sort(expected.begin(), expected.end());
-    sort_lines(test);
-    assert(test == expected);
 }
 
 void test_read_write_file()
