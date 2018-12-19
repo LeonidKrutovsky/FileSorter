@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(FileSorter)
-set(CMAKE_CXX_FLAGS "-std=c++17 -Wall -Wextra -fopenmp -O3 ${CMAKE_CXX_FLAGS}")
-add_executable(${PROJECT_NAME} "main.cpp")
+set(CMAKE_CXX_FLAGS "-std=gnu++17 -Wall -Wextra -fopenmp -O3 ${CMAKE_CXX_FLAGS}")
+add_executable(${PROJECT_NAME} main.cpp threadpool.h)
 target_link_libraries(${PROJECT_NAME} stdc++fs)
 

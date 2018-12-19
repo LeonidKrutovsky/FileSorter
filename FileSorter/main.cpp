@@ -10,6 +10,7 @@
 #include <future>
 #include <chrono>
 #include <stdio.h>
+#include "threadpool.h"
 
 #if defined(__GNUG__)
  #include <parallel/algorithm>
@@ -31,7 +32,12 @@ std::string read_file2(const fs::path & path)
 {
     auto size = fs::file_size(path);
     std::string buffer(fs::file_size(path), ' ');
-    FILE *in = fopen(path.c_str(), "rt");
+    FILE *in;
+    if ((in = fopen(path.c_str(), "rt")) == NULL)
+    {
+        std::cerr << "Cant open file " << path.u8string() << std::endl;
+        return buffer;
+    }
     if (fread(buffer.data(), 1, size,in) != size)
     {
         std::cerr << "Cant read file " << path.u8string() << std::endl;
@@ -40,7 +46,6 @@ std::string read_file2(const fs::path & path)
     fclose(in);
     return buffer;
 }
-
 
 void write_file(const fs::path & path, std::vector<std::string_view> & lines)
 {
