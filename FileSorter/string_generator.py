@@ -6,7 +6,7 @@ import string
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 
-_executor = ProcessPoolExecutor(max_workers=8)
+executor = ProcessPoolExecutor(max_workers=8)
 loop = asyncio.get_event_loop()
 
 def main():
@@ -30,7 +30,7 @@ def worker(num: int):
                    ) for _ in range(random.randint(1,100))) + '\n' for _ in range(num)]
 
 async def get_random_strings(num: int):
-    return await loop.run_in_executor(_executor, worker, num)
+    return await loop.run_in_executor(executor, worker, num)
 
 if __name__ == '__main__':
     main()
