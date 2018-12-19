@@ -17,13 +17,13 @@
 
 1. На рекурсивных async вызовах с ограничением по числу доступных потоков 0m45.026s
 2. На ThreadPool с ограничением воркеров по числу доступных потоков 0m47.031s
-3. На синхронном поиске строк и __gnu_parallel::sort 0m36.607s
-<File reading elapsed time: 10.7721 s
+3. На синхронном поиске строк и __gnu_parallel::sort 0m36.607s  
+`File reading elapsed time: 10.7721 s
 Finding and sorting strings elapsed time: 14.8702 s
-Writing file elapsed time: 12.0137 s >
+Writing file elapsed time: 12.0137 s`
 При этом 
-<Finding lines elapsed time: 0.97648 s
-Sorting elapsed time: 14.1089 s >
+`Finding lines elapsed time: 0.97648 s
+Sorting elapsed time: 14.1089 s`
 Поиск строк ускорять нет смысла, написать сортировку быстрее чем интрисик компилятора вряд ли получится.
 Стоит попробовать ускорить чтение и запись используя posix api функции работы с файлами
 
