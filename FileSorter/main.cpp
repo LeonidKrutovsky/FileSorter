@@ -9,6 +9,7 @@
 #include <thread>
 #include <future>
 #include <chrono>
+#include <stdio.h>
 
 #if defined(__GNUG__)
  #include <parallel/algorithm>
@@ -23,6 +24,20 @@ std::string read_file(const fs::path & path)
     buffer.assign((std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
     file.close();
+    return buffer;
+}
+
+std::string read_file2(const fs::path & path)
+{
+    auto size = fs::file_size(path);
+    std::string buffer(fs::file_size(path), ' ');
+    FILE *in = fopen(path.c_str(), "rt");
+    if (fread(buffer.data(), 1, size,in) != size)
+    {
+        std::cerr << "Cant read file " << path.u8string() << std::endl;
+        return buffer;
+    }
+    fclose(in);
     return buffer;
 }
 
@@ -89,9 +104,7 @@ std::vector<std::string_view> sorted_lines(std::string_view buffer)
     const std::string_view::size_type chunk_size = buffer.size() / max_threads;
     if (chunk_size < treshold)
     {
-        auto lines = find_lines(buffer);
-        std::sort(lines.begin(), lines.end());
-        return lines;
+        return find_and_sort_lines(buffer);
     }
     return async_sorted_lines(buffer, chunk_size);
 #endif
@@ -110,8 +123,17 @@ int main(int argc, char* argv[])
         std::cerr << "No input file " << input_file_name << std::endl;
     }
     const fs::path output_file_name = argv[2];
-    const auto buffer = read_file(input_file_name);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    auto buffer = read_file2(input_file_name);
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+
+
+
     auto lines = sorted_lines(std::string_view(buffer));
     write_file(output_file_name, lines);
+
     return 0;
 }
