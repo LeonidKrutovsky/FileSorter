@@ -45,6 +45,13 @@ std::vector<std::string_view> find_lines(std::string_view str)
     return lines;
 }
 
+std::vector<std::string_view> find_and_sort_lines(std::string_view buffer)
+{
+    auto lines = find_lines(buffer);
+    std::sort(lines.begin(), lines.end());
+    return lines;
+}
+
 
 std::vector<std::string_view> async_sorted_lines(std::string_view buffer, const std::string_view::size_type chunk_size)
 {
@@ -55,17 +62,13 @@ std::vector<std::string_view> async_sorted_lines(std::string_view buffer, const 
 
     if (pos == std::string::npos)
     {
-        auto lines = find_lines(buffer);
-        std::sort(lines.begin(), lines.end());
-        return lines;
+        return find_and_sort_lines(buffer);
     }
 
     auto handle = std::async(std::launch::async,
                              async_sorted_lines, buffer.substr(pos+1), chunk_size);
 
-    auto first_chunk = find_lines(buffer.substr(0, pos));
-    std::sort(first_chunk.begin(), first_chunk.begin() + pos);
-
+    auto first_chunk = find_and_sort_lines(buffer.substr(0, pos));
     auto last_chunk = handle.get();
     std::vector<std::string_view> result(first_chunk.size() + last_chunk.size());
     std::merge(first_chunk.begin(), first_chunk.end(), last_chunk.begin(), last_chunk.end(), result.begin());
@@ -107,9 +110,8 @@ int main(int argc, char* argv[])
     auto lines = sorted_lines(std::string_view(buffer));
     write_file(output_file_name, lines);
 
-    //test_find_lines();
-    //test_sort_lines();
-    //test_read_write_file();
+    test_find_lines();
+    test_read_write_file();
     return 0;
 }
 
