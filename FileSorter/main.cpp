@@ -4,6 +4,8 @@
 #include <fstream>
 #include <assert.h>
 #include <algorithm>
+#include <iterator>
+#include <numeric>
 
 namespace fs = std::filesystem;
 
@@ -13,7 +15,17 @@ std::string read_file(const fs::path & path)
     std::string buffer(fs::file_size(path), ' ');
     buffer.assign((std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
+    file.close();
     return buffer;
+}
+
+template <typename T>
+void write_file(const fs::path & path, T lines)
+{
+    std::ofstream file(path.u8string());
+    std::copy( std::begin(lines), std::end(lines),
+               std::ostream_iterator<std::string_view>(file, "\n") );
+    file.close();
 }
 
 std::vector<std::string_view> find_lines(std::string_view str)
@@ -37,6 +49,7 @@ void sort_lines(std::vector<std::string_view> & lines)
 
 void test_find_lines();
 void test_sort_lines();
+void test_read_write_file();
 
 int main(int argc, char* argv[])
 {
@@ -56,7 +69,8 @@ int main(int argc, char* argv[])
     std::cout << buffer << std::endl;
 
     test_find_lines();
-
+    test_sort_lines();
+    test_read_write_file();
     return 0;
 }
 
@@ -83,4 +97,23 @@ void test_sort_lines()
     std::sort(expected.begin(), expected.end());
     sort_lines(test);
     assert(test == expected);
+}
+
+void test_read_write_file()
+{
+    std::vector<std::string_view> test;
+    test.emplace_back("1111");
+    test.emplace_back("5555");
+    test.emplace_back("AAAA");
+
+    const fs::path path = "test_output.txt";
+    write_file(path, test);
+    assert(fs::exists(path));
+
+    const auto result = read_file(path);
+    fs::remove(path);
+    auto expected_size = std::accumulate(test.begin(), test.end(), 0u, [](size_t x, const auto & sv2){
+        return x + sv2.size() + 1; // + '\n'
+    });
+    assert(result.size() == expected_size);
 }
