@@ -27,7 +27,7 @@ def main():
 def worker(num: int):
     return [''.join(random.choice(
                     string.ascii_uppercase + string.digits + string.ascii_lowercase
-                   ) for _ in range(random.randint(1,100))) + '\n' for _ in range(num)]
+                   ) for _ in range(random.randint(5,100))) + '\n' for _ in range(num)]
 
 async def get_random_strings(num: int):
     return await loop.run_in_executor(executor, worker, num)
