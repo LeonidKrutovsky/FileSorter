@@ -27,7 +27,7 @@ std::string read_file(const fs::path & path)
 }
 
 
-void write_file(const fs::path & path, std::vector<std::string_view> & lines)
+void write_file(const fs::path & path, const std::vector<std::string_view> & lines)
 {
     std::ofstream file(path.u8string());
     std::copy( lines.cbegin(), lines.cend(),
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
     }
     const fs::path output_file_name = argv[2];
     const auto buffer = read_file(input_file_name);
-    auto lines = sorted_lines(std::string_view(buffer));
+    const auto lines = sorted_lines(std::string_view(buffer));
     write_file(output_file_name, lines);
     return 0;
 }
